@@ -14,19 +14,13 @@
       console.log(MAIN.getVariantId());
       console.log(MAIN.arrangedImages);
 
-      MAIN.getAllThumbnailImageElements().forEach((e) => {});
+      MAIN.influenceImages();
 
-      MAIN.getAllParentElements().forEach((e) => {
-        e.classList.remove("o_o");
-      });
-
-      MAIN.getCurrentVariantParentELements().forEach((e) => {
-        e.classList.add("o_o");
-      });
-
-      MAIN.getParentElementsToHide().forEach((e) => {
-        e.style.display = "none";
-      });
+      document
+        .querySelectorAll("[class^='single-option-selector']")
+        .forEach((s) => {
+          s.addEventListener("change", MAIN.influenceImages);
+        });
 
       console.log(MAIN);
     },
@@ -43,7 +37,7 @@
       _o.js.variants.forEach((variant) => {
         for (let [index, media] of _o.js.media.entries()) {
           if (index > lastIndexOfMedia && variant.featured_media?.id) {
-            if (variant.featured_media.id === media.id) {
+            if (variant.featured_media.id == media.id) {
               ("add media to the variant");
               o[variant.id] = {};
               o[variant.id][media.id] = media.preview_image.src;
@@ -55,8 +49,8 @@
               ("break the variant loop");
               break;
             } else {
-              "add media to the common_media",
-                (o[ID][media.id] = media.preview_image.src);
+              ("add media to the common_media");
+              o[ID][media.id] = media.preview_image.src;
             }
           }
         }
@@ -125,6 +119,33 @@
 
     getAllParentElements: () =>
       MAIN.getAllThumbnailImageElements().map((x) => MAIN.getParentElement(x)),
+
+    influenceImages: () => {
+      if (!MAIN.getVariantId()) return;
+      MAIN.getAllParentElements().forEach((e) => {
+        e.classList.remove("o_o");
+      });
+
+      MAIN.getAllParentElements().forEach((e) => {
+        e.style.display = "";
+      });
+
+      MAIN.getCurrentVariantParentELements().forEach((e) => {
+        e.classList.add("o_o");
+      });
+
+      MAIN.getParentElementsToHide().forEach((e) => {
+        e.style.display = "none";
+      });
+
+      MAIN.rearrangeStupidImagesAtLast();
+    },
+
+    rearrangeStupidImagesAtLast: () => {
+      MAIN.getParentElementsToHide().forEach((e) => {
+        e.parentElement.appendChild(e);
+      });
+    },
   };
   // if the theme name is "Boundless" the code will run
   if (window.Shopify.theme.name === "Boundless") MAIN.init();
