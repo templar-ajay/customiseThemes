@@ -21,4 +21,4 @@
       { "resources": ["inject-script.js"], "matches": ["<all_urls>"] }
     ],
     "host_permissions": ["*://*/*"]
-  }
+}
