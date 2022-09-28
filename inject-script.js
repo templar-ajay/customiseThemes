@@ -1,5 +1,31 @@
 (() => {
   const MAIN = {
+    // selectors
+    _: {
+      // childImagesFromGlobalScope -  to reach child images from global scope
+      childImages: ".product.grid .product__photo:not(:first-child) img",
+
+      // to reach parent Element from child Image
+      levelOfParentElementFromChildElement: 2,
+
+      // to reach child parent elements from global scope
+      childContainerElements: ".product.grid .product__photo:not(:first-child)",
+
+      // to reach child images from parentContainer
+      // childFromParent : "img",
+
+      // static
+      getParentElement: (childEl) => {
+        let ret;
+        i(childEl, MAIN._.levelOfParentElementFromChildElement);
+        function i(el, l) {
+          ret = el.parentElement;
+          if (--l > 0) i(ret, l);
+        }
+        return ret;
+      },
+    },
+
     init: async () => {
       console.log("I see you", window.Shopify.theme.name || BOOMR.themeName);
       const o = await MAIN.makeJsJsonObject();
@@ -60,35 +86,92 @@
 
     getVariantId: () => document.querySelector(`[name="id"]`).value,
 
-    /*---------------------------------------------------------------------------------------------------------
-    ----------------------------------------- Dynamic functions -----------------------------------------------
-    ---------------------------------------------------------------------------------------------------------*/
+    influenceImages: () => {
+      MAIN.commonMediaAtLast();
+      document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
+        const imageContainer = MAIN._.getParentElement(imgEl);
+        imageContainer.style.display = "";
+        imageContainer.classList.remove("o_o");
+      });
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
+          const imageContainer = MAIN._.getParentElement(imgEl);
+          imageContainer.style.display = "none";
+          imageContainer.classList.add("o_o");
+        });
 
-    getAllThumbnailImageElements: () =>
-      Array.from(document.querySelectorAll(".product__photo"))
-        .filter((x, o) => o)
-        .map((x) => x.querySelector("img")),
+        for (const [i, [id, src]] of Object.entries([
+          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+          ...Object.entries(MAIN.arrangedImages["common_media"]),
+        ])) {
+          if (i) {
+            document
+              .querySelectorAll(MAIN._.childImages)
+              .forEach((imgEl, index) => {
+                if (MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id) {
+                  const imageContainer = MAIN._.getParentElement(imgEl);
+                  imageContainer.style.display = "";
+                }
+              });
+          }
+        }
+      }
 
-    // remove _300px from all image urls
+      // duplicate the third element alongwith adding class small--hide and append it before description and add class medium--hide to the third element
+      document.querySelectorAll(".product__photo").forEach((div, index) => {
+        if (index === 2) {
+          const duplicateDiv = div.cloneNode(true);
+          duplicateDiv.classList.add("small--hide");
+        }
+      });
+    },
+    commonMediaAtLast: () => {
+      document
+        .querySelectorAll(MAIN._.childContainerElements)
+        .forEach((containerEl) => {
+          for (let [id, src] of Object.entries(
+            MAIN.arrangedImages["common_media"]
+          )) {
+            if (
+              MAIN.getIdFromImageSrc(
+                MAIN.cleanImageUrl(containerEl.querySelector("img"))
+              ) == id
+            ) {
+              // common images at last
+              containerEl.parentElement.appendChild(containerEl);
+              containerEl.classList.remove("small--hide");
+              if (containerEl.classList.contains("medium-up--hide"))
+                containerEl.remove();
+            }
+          }
+        });
+    },
+
+    // appendImageDivInBoundless: (index, element) => {
+    //   if (index || window.matchMedia("(max-width: 750px)").matches) {
+    //     element.parentElement.appendChild(element);
+    //   } else {
+    //     ("appendFirst");
+    //     element.parentElement.insertBefore(
+    //       element,
+    //       document.querySelector(".product__details")
+    //     );
+    //   }
+    // },
+
+    // constant functions
     cleanImageUrl: (img) => img.src.replace("_300x", ""),
-
-    getAllParentsOfThumbnailImageElements: () =>
-      getAllParentsOfThumbnailImageElements().map(
-        (x) => x.parentElement.parentElement
-      ),
-
     getIdFromImageSrc: (src) => {
       let source;
       if (src?.match(/[a-z0-9\-\_.\/\:]{1,}/i))
         source = src.match(/[a-z0-9\-\_.\/\:]{1,}/i)[0];
       let ret = false;
-      if (!MAIN.getVariantId()) {
-        for (let imgID in MAIN.arrangedImages["common_images"]) {
-          if (MAIN.arrangedImages["common_images"][imgID].includes(source)) {
-            ret = "common_images";
+      if (MAIN.getVariantId()) {
+        for (let imgID in MAIN.arrangedImages["common_media"]) {
+          if (MAIN.arrangedImages["common_media"][imgID].includes(source)) {
+            ret = imgID;
           }
         }
-      } else {
         for (let imgID in MAIN.arrangedImages[MAIN.getVariantId()]) {
           if (
             MAIN.arrangedImages[MAIN.getVariantId()][imgID].includes(source)
@@ -100,56 +183,7 @@
 
       return ret;
     },
-    getCurrentVariantImages: () =>
-      MAIN.getAllThumbnailImageElements().filter(
-        (x) =>
-          MAIN.arrangedImages[MAIN.getVariantId()][
-            MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(x))
-          ]
-      ),
-    getCurrentVariantParentELements: () =>
-      MAIN.getCurrentVariantImages().map((x) => x.parentElement.parentElement),
-
-    getParentElementsToHide: () =>
-      MAIN.getAllThumbnailImageElements()
-        .map((x) => MAIN.getParentElement(x))
-        .filter((x) => !x.classList.contains("o_o")),
-
-    getParentElement: (e) => e.parentElement.parentElement,
-
-    getAllParentElements: () =>
-      MAIN.getAllThumbnailImageElements().map((x) => MAIN.getParentElement(x)),
-
-    influenceImages: () => {
-      if (!MAIN.getVariantId()) return;
-      MAIN.getAllParentElements().forEach((e) => {
-        e.classList.remove("o_o");
-      });
-
-      MAIN.getAllParentElements().forEach((e) => {
-        e.style.display = "";
-      });
-
-      MAIN.getCurrentVariantParentELements().forEach((e) => {
-        e.classList.add("o_o");
-      });
-
-      MAIN.getParentElementsToHide().forEach((e) => {
-        e.style.display = "none";
-      });
-
-      MAIN.rearrangeStupidImagesAtLast();
-    },
-
-    rearrangeStupidImagesAtLast: () => {
-      MAIN.getParentElementsToHide().forEach((e) => {
-        e.parentElement.appendChild(e);
-      });
-    },
   };
   // if the theme name is "Boundless" the code will run
   if (window.Shopify.theme.name === "Boundless") MAIN.init();
 })();
-
-// now if mobile layout then first image from childImageElements is discarded
-// else if desktop layout then second image from childImageElements is discarded
