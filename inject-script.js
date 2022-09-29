@@ -41,6 +41,7 @@
       console.log(MAIN.getVariantId());
       console.log(MAIN.arrangedImages);
 
+      MAIN.commonMediaAtLast();
       MAIN.influenceImages();
 
       document
@@ -48,7 +49,6 @@
         .forEach((s) => {
           s.addEventListener("change", MAIN.influenceImages);
         });
-
       console.log(MAIN);
     },
     makeJsJsonObject: async () => {
@@ -87,7 +87,11 @@
     },
 
     getVariantId: () => document.querySelector(`[name="id"]`).value,
-
+    displayNoneDivAtLast: () => {
+      document.querySelectorAll("[display='none']").forEach((el) => {
+        el.parentElement.appendChild(el);
+      });
+    },
     commonMediaAtLast: () => {
       document
         .querySelectorAll(MAIN._.childContainerElements)
@@ -113,44 +117,42 @@
     },
 
     influenceImages: () => {
-      setTimeout(() => {
-        MAIN.commonMediaAtLast();
-        document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
-          const imageContainer = MAIN._.getParentElement(imgEl);
-          imageContainer.style.display = "";
-        });
-        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+      const variantImages = MAIN.arrangedImages[MAIN.getVariantId()];
+
+      // if variant selected display all images
+      if (variantImages) {
+        document
+          .querySelectorAll(MAIN._.childContainerElements)
+          .forEach((container) => {
+            container.style.display = "";
+          });
+        setTimeout(() => {
+          // MAIN.commonMediaAtLast();
+
           document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
             const imageContainer = MAIN._.getParentElement(imgEl);
             imageContainer.style.display = "none";
           });
 
-          if (MAIN.arrangedImages[MAIN.getVariantId()])
-            for (const [i, [id, src]] of Object.entries([
-              ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
-              ...Object.entries(MAIN.arrangedImages["common_media"]),
-            ])) {
-              if (i) {
-                document
-                  .querySelectorAll(MAIN._.childImages)
-                  .forEach((imgEl, index) => {
-                    if (
-                      MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id
-                    ) {
-                      const imageContainer = MAIN._.getParentElement(imgEl);
-                      imageContainer.style.display = "";
-                    }
-                  });
-              }
+          for (const [i, [id, src]] of Object.entries([
+            ...Object.entries(variantImages),
+            ...Object.entries(MAIN.arrangedImages["common_media"]),
+          ])) {
+            if (i) {
+              document
+                .querySelectorAll(MAIN._.childImages)
+                .forEach((imgEl, index) => {
+                  if (MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id) {
+                    const imageContainer = MAIN._.getParentElement(imgEl);
+                    imageContainer.style.display = "";
+                  }
+                });
             }
-        }
+          }
 
-        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-          // duplicate the third element alongwith adding class small--hide and append it before description and add class medium--hide to the third element
+          // duplicate the third element alongwith adding class small--hide and append it before product__details and add class medium--hide to the third element
           const secondVariantImageDiv = MAIN._.getParentElement(
-            MAIN.getElementFromSource(
-              Object.entries(MAIN.arrangedImages[MAIN.getVariantId()])?.[1]?.[1]
-            )
+            MAIN.getElementFromSource(Object.entries(variantImages)?.[1]?.[1])
           );
           if (secondVariantImageDiv) {
             $(secondVariantImageDiv)
@@ -165,16 +167,34 @@
             document.querySelector(".small--hide").style.display = "";
           if (document.querySelector(".medium-up--hide"))
             document.querySelector(".medium-up--hide").style.display = "";
-        }
-      }, 0);
 
-      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-        // remove the duplicate preview image from child elements
-        MAIN.getElementFromSource(
-          Object.entries(MAIN.arrangedImages[MAIN.getVariantId()])[0][1] ||
-            document.querySelector(".product__photo > :not(.hide) img").src
-        ).style = "display:none";
+          // remove the duplicate preview image from child elements
+          MAIN.getElementFromSource(
+            Object.entries(variantImages)[0][1] ||
+              document.querySelector(".product__photo > :not(.hide) img").src
+          ).style = "display:none";
+        }, 0);
+      } else {
+        // if all is selected
+        document
+          .querySelectorAll(MAIN._.childContainerElements)
+          .forEach((container, index) => {
+            container.classList.remove("small--hide");
+            container.classList.remove("medium-up--hide");
+
+            if (!index) {
+              clonedContainer = container.cloneNode(true);
+              clonedContainer.classList.add("medium-up--hide");
+              container.parentElement.insertBefore(
+                clonedContainer,
+                document.querySelector(".product__details").nextElementSibling
+              );
+              container.classList.add("small--hide");
+            }
+          });
       }
+
+      MAIN.displayNoneDivAtLast();
     },
 
     // appendImageDivInBoundless: (index, element) => {
@@ -189,34 +209,22 @@
     //   }
     // },
 
-    resetChildImages: () => {
-      document
-        .querySelectorAll(MAIN._.childContainerElements)
-        .forEach((container) => {
-          container.style.display = "";
-        });
-      document
-        .querySelectorAll("[style='display:none']")
-        .forEach((e) => (e.style.display = ""));
-    },
-
     // constant functions
     cleanImageUrl: (img) => img.src.replace("_300x", ""),
     getIdFromImageSrc: (src) => {
+      const variantId = MAIN.getVariantId();
       let source;
       if (src?.match(/[a-z0-9\-\_.\/\:]{1,}/i))
         source = src.match(/[a-z0-9\-\_.\/\:]{1,}/i)[0];
       let ret = false;
-      if (MAIN.getVariantId()) {
+      if (variantId) {
         for (let imgID in MAIN.arrangedImages["common_media"]) {
           if (MAIN.arrangedImages["common_media"][imgID].includes(source)) {
             ret = imgID;
           }
         }
-        for (let imgID in MAIN.arrangedImages[MAIN.getVariantId()]) {
-          if (
-            MAIN.arrangedImages[MAIN.getVariantId()][imgID].includes(source)
-          ) {
+        for (let imgID in MAIN.arrangedImages[variantId]) {
+          if (MAIN.arrangedImages[variantId][imgID].includes(source)) {
             ret = imgID;
           }
         }

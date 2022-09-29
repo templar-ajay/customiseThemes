@@ -1,0 +1,3 @@
+1. common images at last
+2. display none of unused images
+3. append display none images at last
