@@ -16,7 +16,8 @@
 
       // static
       getParentElement: (childEl) => {
-        let ret;
+        if (!childEl) return false;
+        let ret = false;
         i(childEl, MAIN._.levelOfParentElementFromChildElement);
         function i(el, l) {
           ret = el.parentElement;
@@ -57,6 +58,7 @@
       return { js, json };
     },
     createArrangedImagesObject: (_o) => {
+      // doesn't append common_media at the end of each variant images
       const o = { common_media: {} };
       let ID = "common_media";
       let lastIndexOfMedia = -1;
@@ -86,45 +88,6 @@
 
     getVariantId: () => document.querySelector(`[name="id"]`).value,
 
-    influenceImages: () => {
-      MAIN.commonMediaAtLast();
-      document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
-        const imageContainer = MAIN._.getParentElement(imgEl);
-        imageContainer.style.display = "";
-        imageContainer.classList.remove("o_o");
-      });
-      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-        document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
-          const imageContainer = MAIN._.getParentElement(imgEl);
-          imageContainer.style.display = "none";
-          imageContainer.classList.add("o_o");
-        });
-
-        for (const [i, [id, src]] of Object.entries([
-          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
-          ...Object.entries(MAIN.arrangedImages["common_media"]),
-        ])) {
-          if (i) {
-            document
-              .querySelectorAll(MAIN._.childImages)
-              .forEach((imgEl, index) => {
-                if (MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id) {
-                  const imageContainer = MAIN._.getParentElement(imgEl);
-                  imageContainer.style.display = "";
-                }
-              });
-          }
-        }
-      }
-
-      // duplicate the third element alongwith adding class small--hide and append it before description and add class medium--hide to the third element
-      document.querySelectorAll(".product__photo").forEach((div, index) => {
-        if (index === 2) {
-          const duplicateDiv = div.cloneNode(true);
-          duplicateDiv.classList.add("small--hide");
-        }
-      });
-    },
     commonMediaAtLast: () => {
       document
         .querySelectorAll(MAIN._.childContainerElements)
@@ -145,6 +108,73 @@
             }
           }
         });
+      //remove previous variant images from second image place
+      document.querySelectorAll(".small--hide").forEach((e) => e.remove());
+    },
+
+    influenceImages: () => {
+      setTimeout(() => {
+        MAIN.commonMediaAtLast();
+        document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
+          const imageContainer = MAIN._.getParentElement(imgEl);
+          imageContainer.style.display = "";
+        });
+        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+          document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
+            const imageContainer = MAIN._.getParentElement(imgEl);
+            imageContainer.style.display = "none";
+          });
+
+          if (MAIN.arrangedImages[MAIN.getVariantId()])
+            for (const [i, [id, src]] of Object.entries([
+              ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+              ...Object.entries(MAIN.arrangedImages["common_media"]),
+            ])) {
+              if (i) {
+                document
+                  .querySelectorAll(MAIN._.childImages)
+                  .forEach((imgEl, index) => {
+                    if (
+                      MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id
+                    ) {
+                      const imageContainer = MAIN._.getParentElement(imgEl);
+                      imageContainer.style.display = "";
+                    }
+                  });
+              }
+            }
+        }
+
+        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+          // duplicate the third element alongwith adding class small--hide and append it before description and add class medium--hide to the third element
+          const secondVariantImageDiv = MAIN._.getParentElement(
+            MAIN.getElementFromSource(
+              Object.entries(MAIN.arrangedImages[MAIN.getVariantId()])?.[1]?.[1]
+            )
+          );
+          if (secondVariantImageDiv) {
+            $(secondVariantImageDiv)
+              .clone()
+              .addClass("small--hide")
+              .insertBefore(".product__details");
+
+            secondVariantImageDiv.classList.add("medium-up--hide");
+          }
+
+          if (document.querySelector(".small--hide"))
+            document.querySelector(".small--hide").style.display = "";
+          if (document.querySelector(".medium-up--hide"))
+            document.querySelector(".medium-up--hide").style.display = "";
+        }
+      }, 0);
+
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        // remove the duplicate preview image from child elements
+        MAIN.getElementFromSource(
+          Object.entries(MAIN.arrangedImages[MAIN.getVariantId()])[0][1] ||
+            document.querySelector(".product__photo > :not(.hide) img").src
+        ).style = "display:none";
+      }
     },
 
     // appendImageDivInBoundless: (index, element) => {
@@ -158,6 +188,17 @@
     //     );
     //   }
     // },
+
+    resetChildImages: () => {
+      document
+        .querySelectorAll(MAIN._.childContainerElements)
+        .forEach((container) => {
+          container.style.display = "";
+        });
+      document
+        .querySelectorAll("[style='display:none']")
+        .forEach((e) => (e.style.display = ""));
+    },
 
     // constant functions
     cleanImageUrl: (img) => img.src.replace("_300x", ""),
@@ -180,7 +221,17 @@
           }
         }
       }
-
+      return ret;
+    },
+    getElementFromSource: (src) => {
+      if (!src) return false;
+      let ret = false;
+      const source = src.replace(".jpg", "_300x.jpg");
+      document.querySelectorAll(MAIN._.childImages).forEach((img) => {
+        if (img.src == source) {
+          ret = img;
+        }
+      });
       return ret;
     },
   };
