@@ -1,74 +1,74 @@
+/* logic 
+1. on page load get all the elements in an array. >
+2. save all the elements variant wise on page load. >
+3. then on each variant change remove all child elements from page and append all the elements of the selected variant to the page,
+if(selected variant === selectedVariantOnPageLoad) append all elements of the selected variant 
+else append all elements fo the selected variant except the first.
+*/
+
 (() => {
   const MAIN = {
-    // selectors
     _: {
-      // childImagesFromGlobalScope -  to reach child images from global scope
-      childImages: ".product.grid .product__photo:not(:first-child) img",
-
-      // to reach parent Element from child Image
-      levelOfParentElementFromChildElement: 2,
-
-      // to reach child parent elements from global scope
-      childContainerElements: ".product.grid .product__photo:not(:first-child)",
-
-      // to reach child images from parentContainer
-      // childFromParent : "img",
-
-      // static
-      getParentElement: (childEl) => {
-        if (!childEl) return false;
-        let ret = false;
-        i(childEl, MAIN._.levelOfParentElementFromChildElement);
-        function i(el, l) {
-          ret = el.parentElement;
-          if (--l > 0) i(ret, l);
-        }
-        return ret;
-      },
+      smallImages: ".product__photo:not(:first-child) img",
+      containers: ".product__photo:not(:first-child)",
+      variantSelectors: { dropDowns: ".single-option-selector" },
     },
-
     init: async () => {
-      console.log("I see you", window.Shopify.theme.name || BOOMR.themeName);
-      const o = await MAIN.makeJsJsonObject();
+      MAIN.js = await fetch(location.origin + location.pathname + ".js").then(
+        (x) => x.json()
+      );
 
-      // the js and json data
-      MAIN.js = o.js;
-      MAIN.json = o.json;
+      MAIN.imageContainers = document.querySelectorAll(MAIN._.containers);
 
-      // make images object to arrange images and thumbnail variant wise
-      MAIN.arrangedImages = MAIN.createArrangedImagesObject(o);
+      MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
+      console.log("imagesObj", MAIN.imagesObj);
 
-      console.log(MAIN.getVariantId());
-      console.log(MAIN.arrangedImages);
+      MAIN.firsLoadVariantId = MAIN.getVariantId();
+      console.log(`firsLoadVariantId`, MAIN.firsLoadVariantId);
 
-      MAIN.commonMediaAtLast();
-      MAIN.influenceImages();
-
+      MAIN.boundlessImageOperations();
       document
-        .querySelectorAll("[class^='single-option-selector']")
-        .forEach((s) => {
-          s.addEventListener("change", MAIN.influenceImages);
+        .querySelectorAll(MAIN._.variantSelectors.dropDowns)
+        .forEach(() => {
+          addEventListener("change", () => {
+            MAIN.boundlessImageOperations();
+          });
         });
-      console.log(MAIN);
     },
-    makeJsJsonObject: async () => {
-      const url = window.location.origin + window.location.pathname;
-      js = await fetch(url + ".js").then((x) => x.json());
-      json = await fetch(url + ".json").then((x) => x.json());
-      return { js, json };
-    },
-    createArrangedImagesObject: (_o) => {
+    makeImagesObj: function (js, imageContainers) {
+      /**
+       * @params takes the json as argument
+       * @note doesn't append common_media images after the end of each variant images
+       * @throws error if argument is not a json
+       * @returns imagesObj with images arranged variant wise
+       * @example
+       * input - json file retrieved from url.js
+       * output - {
+       * 11111111<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * 222222<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * 333333<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * common_media:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}}
+       */
+
+      if (Object(js) !== js)
+        return console.error("bad argument passed in " + arguments.callee.name);
       // doesn't append common_media at the end of each variant images
       const o = { common_media: {} };
       let ID = "common_media";
       let lastIndexOfMedia = -1;
-      _o.js.variants.forEach((variant) => {
-        for (let [index, media] of _o.js.media.entries()) {
+      js.variants.forEach((variant) => {
+        for (let [index, media] of js.media.entries()) {
           if (index > lastIndexOfMedia && variant.featured_media?.id) {
             if (variant.featured_media.id == media.id) {
               ("add media to the variant");
               o[variant.id] = {};
-              o[variant.id][media.id] = media.preview_image.src;
+              // o[variant.id][media.id] = media.preview_image.src;
+              o[variant.id][media.id] = { src: "", container: undefined };
+              o[variant.id][media.id].src = media.preview_image.src;
+              o[variant.id][media.id].container = MAIN.getContainerFromImageSrc(
+                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
+                imageContainers
+              );
               ID = variant.id;
 
               ("set the lastIndexOfMedia to the current index, so that already used images are not reused");
@@ -78,171 +78,105 @@
               break;
             } else {
               ("add media to the common_media");
-              o[ID][media.id] = media.preview_image.src;
+              // o[ID][media.id] = media.preview_image.src;
+              o[ID][media.id] = { src: "", container: undefined };
+              o[ID][media.id].src = media.preview_image.src;
+              o[ID][media.id].container = MAIN.getContainerFromImageSrc(
+                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
+                imageContainers
+              );
             }
           }
         }
       });
       return o;
     },
-
-    getVariantId: () => document.querySelector(`[name="id"]`).value,
-    displayNoneDivAtLast: () => {
-      document.querySelectorAll("[display='none']").forEach((el) => {
-        el.parentElement.appendChild(el);
-      });
+    cleanImageUrl: (imageUrl, oldPhrases, newPhrases) => {
+      /**
+       * @returns cleaned url of the image,
+       * @desc
+       * takes the oldPhrases in form of array and replaces each old phrase with a new one in the imageUrl and returns it
+       * @args
+       * imageUrl - url of the image we want to clean
+       * oldPhrases:[] - type array, array of phrases to replace with the newPhrases,
+       * newPhrases:[] - new set of phrases to replace the old phrases,
+       */
+      if (oldPhrases.length !== newPhrases.length)
+        return console.error(
+          "number of new phrases to replace should be equal to number of old phrases to replace"
+        );
+      for (let i = 0; i < oldPhrases.length; i++) {
+        imageUrl = imageUrl.replace(oldPhrases[i], newPhrases[i]);
+      }
+      return imageUrl;
     },
-    commonMediaAtLast: () => {
-      document
-        .querySelectorAll(MAIN._.childContainerElements)
-        .forEach((containerEl) => {
-          for (let [id, src] of Object.entries(
-            MAIN.arrangedImages["common_media"]
-          )) {
-            if (
-              MAIN.getIdFromImageSrc(
-                MAIN.cleanImageUrl(containerEl.querySelector("img"))
-              ) == id
-            ) {
-              // common images at last
-              containerEl.parentElement.appendChild(containerEl);
-              containerEl.classList.remove("small--hide");
-              if (containerEl.classList.contains("medium-up--hide"))
-                containerEl.remove();
+    getContainerFromImageSrc: (src, imageContainers) => {
+      const div = Array.from(imageContainers).filter(
+        (container) =>
+          MAIN.cleanImageUrl(
+            container.querySelector("img").src,
+            ["_300x"],
+            [""]
+          ) === src
+      )[0];
+      div?.classList.remove("small--hide", "medium-up--hide");
+      return div;
+    },
+    getVariantId: () => document.querySelector("[name='id']").value,
+    boundlessImageOperations: () => {
+      console.log("triggred");
+      // clear all child elements
+      document.querySelectorAll(MAIN._.containers).forEach((x) => {
+        x.classList.remove("small-hide", "medium-up--hide");
+        x.remove();
+      });
+
+      // if (selected variant === selectedVariantOnPageLoad) append all elements of the selected variant
+      // else append all elements fo the selected variant except the first.
+
+      const body = document.querySelector(".product");
+      condition = true;
+
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        // if any variant is selected
+        [
+          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+          ...Object.entries(MAIN.arrangedImages["common_media"]),
+        ].forEach((x, i) => {
+          if (i)
+            if (i > 1 && condition) {
+              if (x[1].container) body.appendChild(x[1].container);
+            } else {
+              if (!condition) condition = true;
+              const a = x[1].container;
+              if (a) {
+                const b = a.cloneNode(true);
+                a.classList.add("small--hide");
+                body.insertBefore(
+                  x[1].container,
+                  document.querySelector(".product__details")
+                );
+
+                b.classList.add("medium-up--hide");
+                body.appendChild(b);
+              } else {
+                condition = false;
+              }
             }
+        });
+      } else {
+        // if all variant selected
+        MAIN.imageContainers.forEach((x, i) => {
+          if (i) {
+            body.appendChild(x);
+          } else {
+            y = x.cloneNode(true);
+            y.classList.add("small--hide");
+            body.insertBefore(y, document.querySelector(".product__details"));
           }
         });
-      //remove previous variant images from second image place
-      document.querySelectorAll(".small--hide").forEach((e) => e.remove());
-    },
-
-    influenceImages: () => {
-      const variantImages = MAIN.arrangedImages[MAIN.getVariantId()];
-
-      // if variant selected display all images
-      if (variantImages) {
-        document
-          .querySelectorAll(MAIN._.childContainerElements)
-          .forEach((container) => {
-            container.style.display = "";
-          });
-        setTimeout(() => {
-          // MAIN.commonMediaAtLast();
-
-          document.querySelectorAll(MAIN._.childImages).forEach((imgEl) => {
-            const imageContainer = MAIN._.getParentElement(imgEl);
-            imageContainer.style.display = "none";
-          });
-
-          for (const [i, [id, src]] of Object.entries([
-            ...Object.entries(variantImages),
-            ...Object.entries(MAIN.arrangedImages["common_media"]),
-          ])) {
-            if (i) {
-              document
-                .querySelectorAll(MAIN._.childImages)
-                .forEach((imgEl, index) => {
-                  if (MAIN.getIdFromImageSrc(MAIN.cleanImageUrl(imgEl)) == id) {
-                    const imageContainer = MAIN._.getParentElement(imgEl);
-                    imageContainer.style.display = "";
-                  }
-                });
-            }
-          }
-
-          // duplicate the third element alongwith adding class small--hide and append it before product__details and add class medium--hide to the third element
-          const secondVariantImageDiv = MAIN._.getParentElement(
-            MAIN.getElementFromSource(Object.entries(variantImages)?.[1]?.[1])
-          );
-          if (secondVariantImageDiv) {
-            $(secondVariantImageDiv)
-              .clone()
-              .addClass("small--hide")
-              .insertBefore(".product__details");
-
-            secondVariantImageDiv.classList.add("medium-up--hide");
-          }
-
-          if (document.querySelector(".small--hide"))
-            document.querySelector(".small--hide").style.display = "";
-          if (document.querySelector(".medium-up--hide"))
-            document.querySelector(".medium-up--hide").style.display = "";
-
-          // remove the duplicate preview image from child elements
-          MAIN.getElementFromSource(
-            Object.entries(variantImages)[0][1] ||
-              document.querySelector(".product__photo > :not(.hide) img").src
-          ).style = "display:none";
-        }, 0);
-      } else {
-        // if all is selected
-        document
-          .querySelectorAll(MAIN._.childContainerElements)
-          .forEach((container, index) => {
-            container.classList.remove("small--hide");
-            container.classList.remove("medium-up--hide");
-
-            if (!index) {
-              clonedContainer = container.cloneNode(true);
-              clonedContainer.classList.add("medium-up--hide");
-              container.parentElement.insertBefore(
-                clonedContainer,
-                document.querySelector(".product__details").nextElementSibling
-              );
-              container.classList.add("small--hide");
-            }
-          });
       }
-
-      MAIN.displayNoneDivAtLast();
-    },
-
-    // appendImageDivInBoundless: (index, element) => {
-    //   if (index || window.matchMedia("(max-width: 750px)").matches) {
-    //     element.parentElement.appendChild(element);
-    //   } else {
-    //     ("appendFirst");
-    //     element.parentElement.insertBefore(
-    //       element,
-    //       document.querySelector(".product__details")
-    //     );
-    //   }
-    // },
-
-    // constant functions
-    cleanImageUrl: (img) => img.src.replace("_300x", ""),
-    getIdFromImageSrc: (src) => {
-      const variantId = MAIN.getVariantId();
-      let source;
-      if (src?.match(/[a-z0-9\-\_.\/\:]{1,}/i))
-        source = src.match(/[a-z0-9\-\_.\/\:]{1,}/i)[0];
-      let ret = false;
-      if (variantId) {
-        for (let imgID in MAIN.arrangedImages["common_media"]) {
-          if (MAIN.arrangedImages["common_media"][imgID].includes(source)) {
-            ret = imgID;
-          }
-        }
-        for (let imgID in MAIN.arrangedImages[variantId]) {
-          if (MAIN.arrangedImages[variantId][imgID].includes(source)) {
-            ret = imgID;
-          }
-        }
-      }
-      return ret;
-    },
-    getElementFromSource: (src) => {
-      if (!src) return false;
-      let ret = false;
-      const source = src.replace(".jpg", "_300x.jpg");
-      document.querySelectorAll(MAIN._.childImages).forEach((img) => {
-        if (img.src == source) {
-          ret = img;
-        }
-      });
-      return ret;
     },
   };
-  // if the theme name is "Boundless" the code will run
-  if (window.Shopify.theme.name === "Boundless") MAIN.init();
+  MAIN.init();
 })();
