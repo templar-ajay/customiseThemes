@@ -168,6 +168,7 @@ else append all elements fo the selected variant except the first.
         // if all variant selected
         MAIN.imageContainers.forEach((x, i) => {
           if (i) {
+            if (i == 1) x.classList.add("medium-up--hide");
             body.appendChild(x);
           } else {
             y = x.cloneNode(true);
