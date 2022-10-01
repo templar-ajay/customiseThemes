@@ -179,9 +179,5 @@ else append all elements fo the selected variant except the first.
       }
     },
   };
-<<<<<<< HEAD
   if (window.Shopify?.theme?.name?.toLowerCase() === "boundless") MAIN.init();
-=======
-  if (Shopify?.theme?.name?.toLowerCase() === "boundless") MAIN.init();
->>>>>>> remake
 })();
