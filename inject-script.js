@@ -21,7 +21,7 @@ else append all elements fo the selected variant except the first.
       MAIN.imageContainers = document.querySelectorAll(MAIN._.containers);
 
       MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
-      console.log("imagesObj", MAIN.imagesObj);
+      console.log("arranged images", MAIN.arrangedImages);
 
       MAIN.firsLoadVariantId = MAIN.getVariantId();
       console.log(`firsLoadVariantId`, MAIN.firsLoadVariantId);
