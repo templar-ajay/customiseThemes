@@ -26,12 +26,16 @@ else append all elements fo the selected variant except the first.
       MAIN.firsLoadVariantId = MAIN.getVariantId();
       console.log(`firsLoadVariantId`, MAIN.firsLoadVariantId);
 
-      MAIN.boundlessImageOperations();
+      setTimeout(() => {
+        MAIN.boundlessImageOperations();
+      });
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
         .forEach(() => {
           addEventListener("change", () => {
-            MAIN.boundlessImageOperations();
+            setTimeout(() => {
+              MAIN.boundlessImageOperations();
+            });
           });
         });
     },
@@ -56,10 +60,14 @@ else append all elements fo the selected variant except the first.
       const o = { common_media: {} };
       let ID = "common_media";
       let lastIndexOfMedia = -1;
-      js.variants.forEach((variant) => {
+      [...js.variants, "emptyLoop"].forEach((variant) => {
         for (let [index, media] of js.media.entries()) {
-          if (index > lastIndexOfMedia && variant.featured_media?.id) {
-            if (variant.featured_media.id == media.id) {
+          if (
+            index > lastIndexOfMedia &&
+            ((variant.featured_media?.id && media.media_type === "image") ||
+              variant === "emptyLoop")
+          ) {
+            if (variant.featured_media?.id == media.id) {
               ("add media to the variant");
               o[variant.id] = {};
               // o[variant.id][media.id] = media.preview_image.src;
@@ -145,18 +153,20 @@ else append all elements fo the selected variant except the first.
         ].forEach((x, i) => {
           if (i)
             if (i > 1 && condition) {
-              if (x[1].container) body.appendChild(x[1].container);
+              if (x[1].container) {
+                const container = MAIN.cleanContainer(x[1].container);
+                body.appendChild(container);
+              }
             } else {
               if (!condition) condition = true;
-              const a = x[1].container;
-              if (a) {
-                const b = a.cloneNode(true);
+              if (x[1].container) {
+                const a = MAIN.cleanContainer(x[1].container).cloneNode(true);
+                const b = MAIN.cleanContainer(x[1].container).cloneNode(true);
                 a.classList.add("small--hide");
                 body.insertBefore(
-                  x[1].container,
+                  a,
                   document.querySelector(".product__details")
                 );
-
                 b.classList.add("medium-up--hide");
                 body.appendChild(b);
               } else {
@@ -167,6 +177,7 @@ else append all elements fo the selected variant except the first.
       } else {
         // if all variant selected
         MAIN.imageContainers.forEach((x, i) => {
+          x = MAIN.cleanContainer(x);
           if (i) {
             if (i == 1) x.classList.add("medium-up--hide");
             body.appendChild(x);
@@ -178,6 +189,15 @@ else append all elements fo the selected variant except the first.
         });
       }
     },
+    cleanContainer: (x) => {
+      x.classList.remove("small--hide", "medium-up--hide");
+      console.log(x);
+      return x;
+    },
   };
-  if (window.Shopify?.theme?.name?.toLowerCase() === "boundless") MAIN.init();
+  if (
+    window.Shopify?.theme?.name?.toLowerCase() === "boundless" &&
+    location.pathname.split("/").indexOf("products") >= 0
+  )
+    MAIN.init();
 })();
