@@ -1,2 +1,0 @@
-1. store all images in a variable and empty the container div
-2. append all images according to the variant selected

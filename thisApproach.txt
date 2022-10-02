@@ -1,3 +1,0 @@
-1. make images obj
-2. manipulate images and their parent div's display according to the variant selected
-2.i - check each image if it's to be shown or not
