@@ -12,6 +12,7 @@ else append all elements fo the selected variant except the first.
       smallImages: ".gallery img",
       containers: ".gallery__image-wrapper",
       variantSelectors: { dropDowns: ".form__input--select" },
+      parentContainer: ".gallery__strip",
     },
     init: async () => {
       MAIN.js = await fetch(location.origin + location.pathname + ".js").then(
@@ -26,14 +27,15 @@ else append all elements fo the selected variant except the first.
 
       setTimeout(() => {
         MAIN.expressImageOperations();
-      });
+      }, 1000);
+
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
         .forEach(() => {
           addEventListener("change", () => {
             setTimeout(() => {
               MAIN.expressImageOperations();
-            });
+            }, 1000);
           });
         });
     },
@@ -98,15 +100,60 @@ else append all elements fo the selected variant except the first.
     },
 
     getVariantId: () => document.querySelector("[name='id']").value,
+    scrollToTop: () => {
+      document.body.scrollTop = 0; // For Safari
+      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+    },
 
     expressImageOperations: () => {
       console.log("triggered");
+
+      MAIN.scrollToTop();
+
+      const parentContainer = document.querySelector(MAIN._.parentContainer);
+
+      // 1. remove all containers
+      document.querySelectorAll(MAIN._.containers).forEach((x) => {
+        x.setAttribute("data-media-label", "");
+        x.remove();
+      });
+
+      // 2. append containers of current variant
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        const arr = [
+          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+          ...Object.entries(MAIN.arrangedImages["common_media"]),
+        ];
+
+        for (const [index, [id, { src, container }]] of Object.entries(arr)) {
+          container.setAttribute(
+            "data-media-label",
+            `${index - 1 + 2} of ${arr.length}`
+          );
+          container.setAttribute("aria-roledescription", "Slide");
+          container.setAttribute("role", "group");
+          parentContainer.appendChild(container);
+        }
+        MAIN.setGalleryIndicator(1, arr.length);
+      } else {
+        // if all variant selected
+        MAIN.imageContainers.forEach((container) => {
+          parentContainer.appendChild(container);
+        });
+        MAIN.setGalleryIndicator(1, MAIN.imageContainers.length);
+      }
     },
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
         (x) =>
           x.querySelector("img").getAttribute("data-media-id") == dataMediaId
       )[0],
+    setGalleryIndicator: (x, y) => {
+      document.querySelector("[data-media-current]").innerHTML = x;
+      document.querySelector(
+        "[data-media-indicator-label]"
+      ).lastChild.textContent = y;
+    },
   };
   if (
     window.Shopify?.theme?.name === "Express" &&
