@@ -48,10 +48,10 @@ else append all elements fo the selected variant except the first.
        * @example
        * input - json file retrieved from url.js
        * output - {
-       * 11111111<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
-       * 222222<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
-       * 333333<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
-       * common_media:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}}
+       * 11111111<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
+       * 222222<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
+       * 333333<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},,{1234<imageId>:{src:<image_path>,container:<container div of img>},}},
+       * common_media:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>},}}
        */
 
       if (Object(js) !== js)
