@@ -130,8 +130,13 @@ else append all elements fo the selected variant except the first.
             "data-media-label",
             `${index - 1 + 2} of ${arr.length}`
           );
+          container.setAttribute(
+            "aria-label",
+            container.getAttribute("data-media-label")
+          );
           container.setAttribute("aria-roledescription", "Slide");
           container.setAttribute("role", "group");
+
           parentContainer.appendChild(container);
         }
         MAIN.setGalleryIndicator(1, arr.length);
