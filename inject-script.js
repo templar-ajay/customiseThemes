@@ -27,7 +27,7 @@ else append all elements fo the selected variant except the first.
 
       setTimeout(() => {
         MAIN.expressImageOperations();
-      }, 1000);
+      });
 
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
@@ -35,9 +35,28 @@ else append all elements fo the selected variant except the first.
           addEventListener("change", () => {
             setTimeout(() => {
               MAIN.expressImageOperations();
-            }, 1000);
+            });
           });
         });
+
+      // event listener on next button
+      [
+        document.querySelector("[data-media-arrow-next]"),
+        document.querySelector("[data-media-arrow-previous]"),
+      ].forEach(() => {
+        addEventListener("click", (event) => {
+          document.querySelector("[data-media-arrow-next]").disabled =
+            Number(document.querySelector("[data-media-current]").innerHTML) >=
+            Number(
+              document.querySelector("[data-media-indicator-label]")
+                .childNodes[4].data
+            );
+
+          document.querySelector("[data-media-arrow-previous]").disabled =
+            Number(document.querySelector("[data-media-current]").innerHTML) <=
+            1;
+        });
+      });
     },
     makeImagesObj: function (js, imageContainers) {
       /**
@@ -125,11 +144,18 @@ else append all elements fo the selected variant except the first.
           ...Object.entries(MAIN.arrangedImages["common_media"]),
         ];
 
+        // total number of images to variant images count
+        document.querySelector(
+          "[data-media-indicator-label]"
+        ).childNodes[4].data = arr.length;
+
         for (const [index, [id, { src, container }]] of Object.entries(arr)) {
           container.setAttribute(
             "data-media-label",
             `${index - 1 + 2} of ${arr.length}`
           );
+          // set aria hidden to true
+          if (Number(index)) container.setAttribute("aria-hidden", "true");
           container.setAttribute(
             "aria-label",
             container.getAttribute("data-media-label")
@@ -138,6 +164,7 @@ else append all elements fo the selected variant except the first.
           container.setAttribute("role", "group");
 
           parentContainer.appendChild(container);
+          MAIN.removeAllEventListeners(container);
         }
         MAIN.setGalleryIndicator(1, arr.length);
       } else {
@@ -146,7 +173,23 @@ else append all elements fo the selected variant except the first.
           parentContainer.appendChild(container);
         });
         MAIN.setGalleryIndicator(1, MAIN.imageContainers.length);
+
+        // total number of images to variant images count
+        document.querySelector(
+          "[data-media-indicator-label]"
+        ).childNodes[4].data = MAIN.imageContainers.length;
+
+        // MAIN.removeAllEventListeners(container);
       }
+
+      // clicks on previous button
+      Array.from(
+        Array(
+          Number(document.querySelector("[data-media-current]").innerHTML)
+        ).keys()
+      ).forEach((x, o) => {
+        if (o) document.querySelector("[data-media-arrow-previous]").click();
+      });
     },
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
@@ -154,12 +197,18 @@ else append all elements fo the selected variant except the first.
           x.querySelector("img").getAttribute("data-media-id") == dataMediaId
       )[0],
     setGalleryIndicator: (x, y) => {
-      document.querySelector("[data-media-current]").innerHTML = x;
-      document.querySelector(
-        "[data-media-indicator-label]"
-      ).lastChild.textContent = y;
+      //   document.querySelector("[data-media-current]").innerHTML = x;
+      //   document.querySelector(
+      //     "[data-media-indicator-label]"
+      //   ).lastChild.textContent = y;
+    },
+    removeAllEventListeners: (x) => {
+      let old_element = x;
+      let new_element = old_element.cloneNode(true);
+      old_element.parentNode.replaceChild(new_element, old_element);
     },
   };
+
   if (
     window.Shopify?.theme?.name === "Express" &&
     location.pathname.split("/").indexOf("products") >= 0
