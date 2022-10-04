@@ -3,8 +3,13 @@
     INIT: async () => {
       console.log("hello", Shopify.theme.name);
 
+      MAIN.imageContainers = document.querySelectorAll(
+        "[data-product-thumbnails] li"
+      );
+
       await MAIN.makeJsJson();
-      MAIN.createImagesObj(MAIN.js, MAIN.json);
+      MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
+      console.log(MAIN.arrangedImages);
 
       // if dropdown
       document
@@ -20,9 +25,6 @@
       });
 
       document.querySelector("fieldset label")?.click();
-
-      document.querySelectorAll("[id^='SingleOptionSelector-']").value =
-        Object.entries(MAIN.imagesObj)[1][0];
 
       MAIN.influenceDom();
 
@@ -62,14 +64,18 @@
       }
     },
     commonImagesAtLast: () => {
-      MAIN.imagesObj["common-images"]?.forEach((imgId_imgSrc) => {
-        Array.from(MAIN.getAllStackedImageElements()).forEach((img) => {
-          if (img.getAttribute("data-media-id") == imgId_imgSrc[0]) {
-            MAIN.getStackedImageParentElement(img).parentElement.append(
-              MAIN.getStackedImageParentElement(img)
-            );
+      if(MAIN.arrangedImages["common_media"]){
+
+        
+        for(const [id,{src,container}] of Object.entries(MAIN.arrangedImages["common_media"])) {
+          Array.from(MAIN.getAllStackedImageElements()).forEach((img) => {
+            if (img.getAttribute("data-media-id") == id) {
+              MAIN.getStackedImageParentElement(img).parentElement.append(
+                MAIN.getStackedImageParentElement(img)
+                );
+              }
+            });
           }
-        });
 
         Array.from(MAIN.getAllThumbnailImageElements()).forEach((img) => {
           const imageCurrentSource = img.currentSrc.replace("_150x", "");
@@ -130,91 +136,111 @@
       }
       return true;
     },
-    createImagesObj: (JS, JSON) => {
-      const sortedImageObj = {};
-      let arrLastID = [];
-      function innerFunction() {
-        JSON.product.images.forEach((image) => {
-          if (image.variant_ids[0]) {
-            image.variant_ids.forEach((variant_id) => {
-              sortedImageObj[variant_id]
-                ? null
-                : (sortedImageObj[`${variant_id}`] = []);
-              sortedImageObj[variant_id].push(image.src);
-            });
-            arrLastID = image.variant_ids;
-          } else {
-            if (arrLastID.length == 0) {
-              arrLastID.push("common-images");
-            }
-            arrLastID.forEach((lastID) => {
-              (sortedImageObj[lastID] || (sortedImageObj[lastID] = [])).push(
-                image.src
-              );
-            });
-          }
-        });
+    cleanImageUrl: (imageUrl, oldPhrases, newPhrases) => {
+      /**
+       * @returns cleaned url of the image,
+       * @desc
+       * takes the oldPhrases in form of array and replaces each old phrase with a new one in the imageUrl and returns it
+       * @args
+       * imageUrl - url of the image we want to clean
+       * oldPhrases:[] - type array, array of phrases to replace with the newPhrases,
+       * newPhrases:[] - new set of phrases to replace the old phrases,
+       */
+      if (oldPhrases.length !== newPhrases.length)
+        return console.error(
+          "number of new phrases to replace should be equal to number of old phrases to replace"
+        );
+      for (let i = 0; i < oldPhrases.length; i++) {
+        imageUrl = imageUrl.replace(oldPhrases[i], newPhrases[i]);
+      }
+      return imageUrl;
+    },
+    getContainerFromImageSrc: (src, imageContainers) => {
+      const div = Array.from(imageContainers).filter(
+        (container) =>
+          MAIN.cleanImageUrl(
+            container.querySelector("img").src,
+            ["_300x"],
+            [""]
+          ) === src
+      )[0];
+      div?.classList.remove("small--hide", "medium-up--hide");
+      return div;
+    },
+    makeImagesObj: function (js, imageContainers) {
+      /**
+       * @params takes the json as argument
+       * @note doesn't append common_media images after the end of each variant images
+       * @throws error if argument is not a json
+       * @returns imagesObj with images arranged variant wise
+       * @example
+       * input - json file retrieved from url.js
+       * output - {
+       * 11111111<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
+       * 222222<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
+       * 333333<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},,{1234<imageId>:{src:<image_path>,container:<container div of img>},}},
+       * common_media:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>},}}
+       */
 
-        // push global images at the end of each
-        for (let key in sortedImageObj) {
-          if (key != "common-images") {
-            if (sortedImageObj["common-images"]) {
-              sortedImageObj[key].push(...sortedImageObj["common-images"]);
+      if (Object(js) !== js)
+        return console.error("bad argument passed in " + arguments.callee.name);
+      // doesn't append common_media at the end of each variant images
+      const o = { common_media: {} };
+      let ID = "common_media";
+      let lastIndexOfMedia = -1;
+      [...js.variants, "emptyLoop"].forEach((variant) => {
+        for (let [index, media] of js.media.entries()) {
+          if (
+            index > lastIndexOfMedia &&
+            ((variant.featured_media?.id && media.media_type === "image") ||
+              variant === "emptyLoop")
+          ) {
+            if (variant.featured_media?.id == media.id) {
+              ("add media to the variant");
+              o[variant.id] = {};
+              // o[variant.id][media.id] = media.preview_image.src;
+              o[variant.id][media.id] = { src: "", container: undefined };
+              o[variant.id][media.id].src = media.preview_image.src;
+              o[variant.id][media.id].container = MAIN.getContainerFromImageSrc(
+                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
+                imageContainers
+              );
+              ID = variant.id;
+
+              ("set the lastIndexOfMedia to the current index, so that already used images are not reused");
+              lastIndexOfMedia = index;
+
+              ("break the variant loop");
+              break;
+            } else {
+              ("add media to the common_media");
+              // o[ID][media.id] = media.preview_image.src;
+              o[ID][media.id] = { src: "", container: undefined };
+              o[ID][media.id].src = media.preview_image.src;
+              o[ID][media.id].container = MAIN.getContainerFromImageSrc(
+                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
+                imageContainers
+              );
             }
           }
         }
-
-        JS.media.forEach((e) => {
-          e.media_type != "image"
-            ? (
-                sortedImageObj["common-media"] ||
-                (sortedImageObj["common-media"] = [])
-              ).push([e.id, e.preview_image.src])
-            : null;
-        });
-
-        const featuredMediaIds = [];
-
-        JS.variants.forEach((variant) => {
-          if (variant.featured_media?.id)
-            featuredMediaIds.push(variant.featured_media.id);
-        });
-
-        Object.keys(sortedImageObj).forEach((productId) => {
-          sortedImageObj[productId].forEach((imageSrc) => {
-            sortedImageObj[productId].splice(
-              sortedImageObj[productId].indexOf(imageSrc),
-              1,
-              [getID(imageSrc), imageSrc]
-            );
-          });
-        });
-      }
-      function getID(src) {
-        let id;
-        JS.media.forEach((media) => {
-          if (media.src === src) {
-            id = media.id;
-          }
-        });
-        return id;
-      }
-      innerFunction();
-      MAIN.imagesObj = sortedImageObj;
-      console.log(MAIN.imagesObj);
+      });
+      return o;
     },
 
     influenceImages: () => {
       console.log(`influencing images...`);
 
       Array.from(MAIN.getAllStackedImageElements()).forEach((img) => {
-        if (MAIN.imagesObj[MAIN.getVariantId()]) {
+        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
           let show = false;
-          MAIN.imagesObj[MAIN.getVariantId()].forEach((imgId_imgSrc) => {
-            imgId_imgSrc[0] === Number(img.getAttribute("data-media-id"))
+          for (let [id, { src, container }] of Object.entries(
+            MAIN.arrangedImages[MAIN.getVariantId()]
+          )) {
+            id === Number(img.getAttribute("data-media-id"))
               ? (show = true)
               : null;
-          });
+          }
           MAIN.getStackedImageParentElement(img).style.display = show
             ? ""
             : "none";
@@ -231,12 +257,13 @@
       Array.from(MAIN.getAllThumbnailImageElements()).forEach((img) => {
         const currentSource = img.currentSrc.replace("_150x", "");
 
-        if (MAIN.imagesObj[MAIN.getVariantId()]) {
+        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
           let show = false;
-          MAIN.imagesObj[MAIN.getVariantId()].forEach((imgId_imgSrc) => {
-            if (imgId_imgSrc[0] == MAIN.getIdFromImageSrc(currentSource))
-              show = true;
-          });
+          for (const [id, { src, container }] of Object.entries(
+            MAIN.arrangedImages[MAIN.getVariantId()]
+          )) {
+            if (id == MAIN.getIdFromImageSrc(currentSource)) show = true;
+          }
           MAIN.getThumbnailImageParentElement(img).style.display = show
             ? ""
             : "none";
@@ -300,11 +327,15 @@
       if (src.match(/[a-z0-9\-\_.\/\:]{1,}/i))
         source = src.match(/[a-z0-9\-\_.\/\:]{1,}/i)[0];
       let ret;
-      MAIN.imagesObj[MAIN.getVariantId()]?.forEach((imgId_imgSrc) => {
-        if (imgId_imgSrc[1].includes(source)) {
-          ret = imgId_imgSrc[0];
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        for (const [id, { src, container }] of Object.entries(
+          MAIN.arrangedImages[MAIN.getVariantId()]
+        )) {
+          if (src.includes(source)) {
+            ret = id;
+          }
         }
-      });
+      }
       return ret;
     },
     thumbnailHiddenElementsAtLast: () => {
