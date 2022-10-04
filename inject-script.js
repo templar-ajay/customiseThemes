@@ -8,10 +8,10 @@
 (() => {
   const MAIN = {
     _: {
-      smallImages: ".gallery img",
-      containers: ".gallery__image-wrapper",
-      variantSelectors: { dropDowns: ".form__input--select" },
-      parentContainer: ".gallery__strip",
+      smallImages: "",
+      containers: "",
+      variantSelectors: { dropDowns: "" },
+      parentContainer: "",
     },
     init: async () => {
       MAIN.js = await fetch(location.origin + location.pathname + ".js").then(
@@ -24,41 +24,15 @@
       MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
       console.log("arranged images", MAIN.arrangedImages);
 
-      // to fix the image lazy load issue
-      MAIN.imageContainers.forEach(() => {
-        document.querySelector("[data-media-arrow-next]").click();
-      });
-
-      MAIN.expressImageOperations();
-
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
         .forEach(() => {
           addEventListener("change", () => {
             setTimeout(() => {
-              MAIN.expressImageOperations();
+              // imageOperations function
             });
           });
         });
-
-      // event listener on next button
-      [
-        document.querySelector("[data-media-arrow-next]"),
-        document.querySelector("[data-media-arrow-previous]"),
-      ].forEach(() => {
-        addEventListener("click", (event) => {
-          document.querySelector("[data-media-arrow-next]").disabled =
-            Number(document.querySelector("[data-media-current]").innerHTML) >=
-            Number(
-              document.querySelector("[data-media-indicator-label]")
-                .childNodes[4].data
-            );
-
-          document.querySelector("[data-media-arrow-previous]").disabled =
-            Number(document.querySelector("[data-media-current]").innerHTML) <=
-            1;
-        });
-      });
     },
     makeImagesObj: function (js, imageContainers) {
       /**
@@ -126,86 +100,12 @@
       document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     },
 
-    expressImageOperations: () => {
-      console.log("triggered");
-
-      MAIN.scrollToTop();
-
-      const parentContainer = document.querySelector(MAIN._.parentContainer);
-
-      // 1. remove all containers
-      document.querySelectorAll(MAIN._.containers).forEach((x) => {
-        x.setAttribute("data-media-label", "");
-        x.remove();
-      });
-
-      // 2. append containers of current variant
-      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-        const arr = [
-          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
-          ...Object.entries(MAIN.arrangedImages["common_media"]),
-        ];
-
-        // total number of images to variant images count
-        document.querySelector(
-          "[data-media-indicator-label]"
-        ).childNodes[4].data = arr.length;
-
-        for (const [index, [id, { src, container }]] of Object.entries(arr)) {
-          container.setAttribute(
-            "data-media-label",
-            `${index - 1 + 2} of ${arr.length}`
-          );
-          // set aria hidden to true
-          if (Number(index)) container.setAttribute("aria-hidden", "true");
-          container.setAttribute(
-            "aria-label",
-            container.getAttribute("data-media-label")
-          );
-          container.setAttribute("aria-roledescription", "Slide");
-          container.setAttribute("role", "group");
-
-          parentContainer.appendChild(container);
-          MAIN.removeAllEventListeners(container);
-        }
-        MAIN.setGalleryIndicator(1, arr.length);
-      } else {
-        // if all variant selected
-        MAIN.imageContainers.forEach((container) => {
-          parentContainer.appendChild(container);
-        });
-        MAIN.setGalleryIndicator(1, MAIN.imageContainers.length);
-
-        // total number of images to variant images count
-        document.querySelector(
-          "[data-media-indicator-label]"
-        ).childNodes[4].data = MAIN.imageContainers.length;
-
-        // MAIN.removeAllEventListeners(container);
-      }
-
-      // clicks on previous button
-
-      Array.from(
-        Array(
-          Number(document.querySelector("[data-media-current]").innerHTML)
-        ).keys()
-      ).forEach((x, o) => {
-        if (o) document.querySelector("[data-media-arrow-previous]").click();
-      });
-      // // scroll to last
-    },
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
         (x) =>
           x.querySelector("img").getAttribute("data-media-id") == dataMediaId
       )[0],
-    setGalleryIndicator: (x, y) => {
-      //   document.querySelector("[data-media-current]").innerHTML = x;
-      //   document.querySelector(
-      //     "[data-media-indicator-label]"
-      //   ).lastChild.textContent = y;
-    },
+
     removeAllEventListeners: (x) => {
       let old_element = x;
       let new_element = old_element.cloneNode(true);
@@ -214,7 +114,7 @@
   };
 
   if (
-    window.Shopify?.theme?.name === "Express" &&
+    window.Shopify?.theme?.name === "<theme-name>" &&
     location.pathname.split("/").indexOf("products") >= 0
   )
     MAIN.init();
