@@ -140,8 +140,9 @@
   };
 
   if (
-    window.Shopify?.theme?.name === "Brooklyn" &&
-    location.pathname.split("/").indexOf("products") >= 0
+    location.pathname.includes("/products/") &&
+    location.pathname.length > 10 &&
+    window.Shopify?.theme?.name === "Brooklyn"
   )
     MAIN.init();
 })();
