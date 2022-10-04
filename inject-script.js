@@ -197,7 +197,8 @@ else append all elements fo the selected variant except the first.
   };
   if (
     window.Shopify?.theme?.name?.toLowerCase() === "boundless" &&
-    location.pathname.split("/").indexOf("products") >= 0
+    location.pathname.includes("/products/") &&
+    location.pathname.length>10
   )
     MAIN.init();
 })();
