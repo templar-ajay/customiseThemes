@@ -1,7 +1,7 @@
-# injectJs
+# InjectJs
 
-a chrome extension to make your experience smooth on shopify stores
+A chrome extension to make your experience smooth on shopify stores
 
-## supports
+## Supports
 
-1. brooklyn
+1. Brooklyn

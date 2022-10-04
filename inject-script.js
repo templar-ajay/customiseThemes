@@ -8,10 +8,10 @@
 (() => {
   const MAIN = {
     _: {
-      smallImages: "",
-      containers: "",
-      variantSelectors: { dropDowns: "" },
-      parentContainer: "",
+      smallImages: ".product-single__media-flex-wrapper img",
+      containers: ".product-single__media-flex-wrapper",
+      variantSelectors: { dropDowns: "", buttons: "fieldset label" },
+      parentContainer: ".product-single__media-group",
     },
     init: async () => {
       MAIN.js = await fetch(location.origin + location.pathname + ".js").then(
@@ -19,17 +19,19 @@
       );
 
       MAIN.imageContainers = document.querySelectorAll(MAIN._.containers);
-      // console.log(MAIN.imageContainers);
+      console.log(MAIN.imageContainers);
 
       MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
       console.log("arranged images", MAIN.arrangedImages);
 
+      MAIN.brooklynImageOperations();
+
       document
-        .querySelectorAll(MAIN._.variantSelectors.dropDowns)
-        .forEach(() => {
-          addEventListener("change", () => {
+        .querySelectorAll(MAIN._.variantSelectors.buttons)
+        .forEach((x) => {
+          x.addEventListener("click", () => {
             setTimeout(() => {
-              // imageOperations function
+              MAIN.brooklynImageOperations();
             });
           });
         });
@@ -100,6 +102,30 @@
       document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     },
 
+    brooklynImageOperations: () => {
+      MAIN.scrollToTop();
+      const parentContainer = document.querySelector(MAIN._.parentContainer);
+      // remove all containers
+      MAIN.imageContainers.forEach((x) => {
+        x.remove();
+      });
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        // for variant selected
+        const arr = [
+          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+          ...Object.entries(MAIN.arrangedImages["common_media"]),
+        ];
+        for (const [id, { src, container }] of arr) {
+          parentContainer.appendChild(container);
+        }
+      } else {
+        // all selected
+        MAIN.imageContainers.forEach((x) => {
+          parentContainer.appendChild(x);
+        });
+      }
+    },
+
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
         (x) =>
@@ -114,7 +140,7 @@
   };
 
   if (
-    window.Shopify?.theme?.name === "<theme-name>" &&
+    window.Shopify?.theme?.name === "Brooklyn" &&
     location.pathname.split("/").indexOf("products") >= 0
   )
     MAIN.init();
