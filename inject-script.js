@@ -25,9 +25,12 @@ else append all elements fo the selected variant except the first.
       MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
       console.log("arranged images", MAIN.arrangedImages);
 
-      setTimeout(() => {
-        MAIN.expressImageOperations();
+      // to fix the image lazy load issue
+      MAIN.imageContainers.forEach(() => {
+        document.querySelector("[data-media-arrow-next]").click();
       });
+
+      MAIN.expressImageOperations();
 
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
@@ -183,6 +186,7 @@ else append all elements fo the selected variant except the first.
       }
 
       // clicks on previous button
+
       Array.from(
         Array(
           Number(document.querySelector("[data-media-current]").innerHTML)
@@ -190,6 +194,7 @@ else append all elements fo the selected variant except the first.
       ).forEach((x, o) => {
         if (o) document.querySelector("[data-media-arrow-previous]").click();
       });
+      // // scroll to last
     },
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
