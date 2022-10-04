@@ -2,8 +2,6 @@
 1. on page load get all the elements in an array. >
 2. save all the elements variant wise on page load. >
 3. then on each variant change remove all child elements from page and append all the elements of the selected variant to the page,
-if(selected variant === selectedVariantOnPageLoad) append all elements of the selected variant 
-else append all elements fo the selected variant except the first.
 */
 
 (() => {
