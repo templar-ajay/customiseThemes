@@ -1,171 +1,36 @@
 (() => {
   const MAIN = {
-    INIT: async () => {
-      console.log("hello", Shopify.theme.name);
-
-      MAIN.imageContainers = document.querySelectorAll(
-        "[data-product-thumbnails] li"
+    _: {
+      smallImages: "[data-product-thumbnails] li img",
+      containers: "[data-product-thumbnails] li",
+      variantSelectors: { dropDowns: "select[id^='SingleOptionSelector-']" },
+      parentContainer: "[data-product-thumbnails]",
+      cleanImage: ["_150x.", "."],
+    },
+    init: async () => {
+      console.log("it worked");
+      MAIN.js = await fetch(location.origin + location.pathname + ".js").then(
+        (x) => x.json()
       );
 
-      await MAIN.makeJsJson();
+      MAIN.imageContainers = document.querySelectorAll(MAIN._.containers);
+      console.log("imageContainers", MAIN.imageContainers);
+
       MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
-      console.log(MAIN.arrangedImages);
+      console.log("arranged images", MAIN.arrangedImages);
 
-      // if dropdown
+      // firstTime
+      MAIN.brooklynImageOperations();
+
       document
-        .querySelectorAll("[id^='SingleOptionSelector-']")
-        .forEach((x) => {
-          x.addEventListener("change", MAIN.influenceDom);
-          x.addEventListener("input", MAIN.influenceDom);
-        });
-
-      // if buttons
-      document.querySelectorAll("fieldset label").forEach((label) => {
-        label.addEventListener("click", MAIN.influenceDom);
-      });
-
-      document.querySelector("fieldset label")?.click();
-
-      MAIN.influenceDom();
-
-      // popup Script
-      document.querySelectorAll("img").forEach((img) => {
-        img.addEventListener("click", MAIN.influencePopup);
-      });
-    },
-    influenceDom: () => {
-      document.body.scrollTop = 0; // For Safari
-      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
-      setTimeout(() => {
-        MAIN.influenceImages();
-        MAIN.commonImagesAtLast();
-        // removes the empty spaces between elements of slider
-        // if (MAIN.imagesObj[MAIN.getVariantId()])
-        MAIN.thumbnailHiddenElementsAtLast();
-
-        if (window.matchMedia("(max-width: 590px)").matches)
-          MAIN.influenceSlick();
-      });
-    },
-    influencePopup: () => {
-      var magnificPopup = $.magnificPopup.instance;
-      if (MAIN.imagesObj[MAIN.getVariantId()] && magnificPopup.items) {
-        console.log(magnificPopup.items);
-
-        magnificPopup.items = Array.from(magnificPopup.items).filter((x) =>
-          MAIN.isCurrentVariantImage(x)
-        );
-        magnificPopup.items = MAIN.arrangeZoomedImagesInOrder(
-          magnificPopup.items
-        );
-
-        // console.log((magnificPopup.currItem.index = 0));
-        console.log((magnificPopup.index = 0));
-      }
-    },
-    commonImagesAtLast: () => {
-      if(MAIN.arrangedImages["common_media"]){
-
-        
-        for(const [id,{src,container}] of Object.entries(MAIN.arrangedImages["common_media"])) {
-          Array.from(MAIN.getAllStackedImageElements()).forEach((img) => {
-            if (img.getAttribute("data-media-id") == id) {
-              MAIN.getStackedImageParentElement(img).parentElement.append(
-                MAIN.getStackedImageParentElement(img)
-                );
-              }
+        .querySelectorAll(MAIN._.variantSelectors.dropDowns)
+        .forEach(() => {
+          addEventListener("change", () => {
+            setTimeout(() => {
+              MAIN.brooklynImageOperations();
             });
-          }
-
-        Array.from(MAIN.getAllThumbnailImageElements()).forEach((img) => {
-          const imageCurrentSource = img.currentSrc.replace("_150x", "");
-          if (MAIN.getIdFromImageSrc(imageCurrentSource) == imgId_imgSrc[0]) {
-            MAIN.getThumbnailImageParentElement(img).parentElement.append(
-              MAIN.getThumbnailImageParentElement(img)
-            );
-          }
-        });
-      });
-    },
-    getVariantId: () =>
-      document.querySelector(`[name="id"]`).value ||
-      new URL(window.location.href).searchParams.get("variant") ||
-      MAIN.getVariantIdFromSelects() ||
-      MAIN.getVariantIdFromForm(),
-    makeJsJson: async () => {
-      const url = window.location.origin + window.location.pathname;
-      MAIN.js = await fetchJSON(url + ".js");
-      MAIN.json = await fetchJSON(url + ".json");
-      async function fetchJSON(url) {
-        const x = await fetch(url);
-        return await x.json();
-      }
-      console.log("js", MAIN.js);
-      console.log("json", MAIN.json);
-
-      document.querySelector(`[name="id"]`);
-    },
-    getVariantIdFromForm: () => {
-      const formData = {};
-      Array.from(
-        document.querySelector("form[action='/cart/add']").elements
-      ).map((item) => {
-        if (!item.name) return null;
-        formData[item.name] = item.value;
-      });
-      return Number(formData.id);
-    },
-    getVariantIdFromSelects: () => {
-      const arr = [];
-      document
-        .querySelectorAll("[id^='SingleOptionSelector-']")
-        .forEach((select) => {
-          select.options.forEach((option) => {
-            if (option.attributes.selected)
-              arr.push(option.attributes.value.nodeValue);
           });
         });
-      return MAIN.js.variants.filter((v) => MAIN.arraysEqual(arr, v.options))[0]
-        .id;
-    },
-    arraysEqual: (a, b) => {
-      if (a == null || b == null) return false;
-      if (a.length !== b.length) return false;
-      for (var i = 0; i < a.length; ++i) {
-        if (a[i] !== b[i]) return false;
-      }
-      return true;
-    },
-    cleanImageUrl: (imageUrl, oldPhrases, newPhrases) => {
-      /**
-       * @returns cleaned url of the image,
-       * @desc
-       * takes the oldPhrases in form of array and replaces each old phrase with a new one in the imageUrl and returns it
-       * @args
-       * imageUrl - url of the image we want to clean
-       * oldPhrases:[] - type array, array of phrases to replace with the newPhrases,
-       * newPhrases:[] - new set of phrases to replace the old phrases,
-       */
-      if (oldPhrases.length !== newPhrases.length)
-        return console.error(
-          "number of new phrases to replace should be equal to number of old phrases to replace"
-        );
-      for (let i = 0; i < oldPhrases.length; i++) {
-        imageUrl = imageUrl.replace(oldPhrases[i], newPhrases[i]);
-      }
-      return imageUrl;
-    },
-    getContainerFromImageSrc: (src, imageContainers) => {
-      const div = Array.from(imageContainers).filter(
-        (container) =>
-          MAIN.cleanImageUrl(
-            container.querySelector("img").src,
-            ["_300x"],
-            [""]
-          ) === src
-      )[0];
-      div?.classList.remove("small--hide", "medium-up--hide");
-      return div;
     },
     makeImagesObj: function (js, imageContainers) {
       /**
@@ -176,10 +41,10 @@
        * @example
        * input - json file retrieved from url.js
        * output - {
-       * 11111111<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
-       * 222222<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>}}},
-       * 333333<variant_id>:{{1234<imageId>:{src:<image_path>,container:<container div of img>},,{1234<imageId>:{src:<image_path>,container:<container div of img>},}},
-       * common_media:{{1234<imageId>:{src:<image_path>,container:<container div of img>},{1234<imageId>:{src:<image_path>,container:<container div of img>},}}
+       * 11111111<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * 222222<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * 333333<variant_id>:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}},
+       * common_media:{{1234<imageId>:"xyz.jpeg"<image_path>},{1234<imageId>:"xyz.jpeg"<image_path>}}}
        */
 
       if (Object(js) !== js)
@@ -198,13 +63,16 @@
             if (variant.featured_media?.id == media.id) {
               ("add media to the variant");
               o[variant.id] = {};
-              // o[variant.id][media.id] = media.preview_image.src;
+              // o[variant.id][media.id] = media.preview_image.getAttribute("data-src");
               o[variant.id][media.id] = { src: "", container: undefined };
               o[variant.id][media.id].src = media.preview_image.src;
-              o[variant.id][media.id].container = MAIN.getContainerFromImageSrc(
-                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
-                imageContainers
-              );
+              o[variant.id][media.id].container =
+                MAIN.getImageFromDataMediaId(media.id) ||
+                MAIN.getImageFromSrc(
+                  media.preview_image.src,
+                  MAIN.imageContainers
+                );
+
               ID = variant.id;
 
               ("set the lastIndexOfMedia to the current index, so that already used images are not reused");
@@ -214,13 +82,15 @@
               break;
             } else {
               ("add media to the common_media");
-              // o[ID][media.id] = media.preview_image.src;
+              // o[ID][media.id] = media.preview_image.getAttribute("data-src");
               o[ID][media.id] = { src: "", container: undefined };
               o[ID][media.id].src = media.preview_image.src;
-              o[ID][media.id].container = MAIN.getContainerFromImageSrc(
-                MAIN.cleanImageUrl(media.preview_image.src, ["_300x"], [""]),
-                imageContainers
-              );
+              o[ID][media.id].container =
+                MAIN.getImageFromDataMediaId(media.id) ||
+                MAIN.getImageFromSrc(
+                  media.preview_image.src,
+                  MAIN.imageContainers
+                );
             }
           }
         }
@@ -228,155 +98,104 @@
       return o;
     },
 
-    influenceImages: () => {
-      console.log(`influencing images...`);
+    getVariantId: () =>
+      /* first priority should be from the href,
+       in case the user desperately selected the soldout variant and shared it with other person */
+      new URL(window.location.href).searchParams.get("variant") ||
+      document.querySelector("[name='id']").value,
 
-      Array.from(MAIN.getAllStackedImageElements()).forEach((img) => {
-        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-          let show = false;
-          for (let [id, { src, container }] of Object.entries(
-            MAIN.arrangedImages[MAIN.getVariantId()]
-          )) {
-            id === Number(img.getAttribute("data-media-id"))
-              ? (show = true)
-              : null;
-          }
-          MAIN.getStackedImageParentElement(img).style.display = show
-            ? ""
-            : "none";
-          if (show)
-            MAIN.getStackedImageParentElement(img).classList.add("myClass");
-          if (!show)
-            MAIN.getStackedImageParentElement(img).classList.remove("myClass");
-        } else {
-          MAIN.getStackedImageParentElement(img).removeAttribute("style");
-          MAIN.getStackedImageParentElement(img).classList.remove("myClass");
-        }
-      });
-
-      Array.from(MAIN.getAllThumbnailImageElements()).forEach((img) => {
-        const currentSource = img.currentSrc.replace("_150x", "");
-
-        if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-          let show = false;
-          for (const [id, { src, container }] of Object.entries(
-            MAIN.arrangedImages[MAIN.getVariantId()]
-          )) {
-            if (id == MAIN.getIdFromImageSrc(currentSource)) show = true;
-          }
-          MAIN.getThumbnailImageParentElement(img).style.display = show
-            ? ""
-            : "none";
-          if (show)
-            MAIN.getThumbnailImageParentElement(img).classList.add("myClass");
-          if (!show)
-            MAIN.getThumbnailImageParentElement(img).classList.remove(
-              "myClass"
-            );
-        } else {
-          MAIN.getThumbnailImageParentElement(img).removeAttribute("style");
-          MAIN.getThumbnailImageParentElement(img).classList.remove("myClass");
-        }
-      });
+    scrollToTop: () => {
+      document.body.scrollTop = 0; // For Safari
+      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     },
-    influenceSlick: () => {
-      console.log("influencing slick");
-
-      // unFiltering slick
-      $("[data-product-single-media-group]").slick("slickUnfilter", ".myClass");
-
-      const obj = $(".product-single__media-group").slick("getSlick").options;
-
-      // remove slick
-      $("[data-product-single-media-group]").slick("unslick", true);
-
-      MAIN.influenceImages();
-      MAIN.commonImagesAtLast();
-
-      // make slick
-      $("[data-product-single-media-group]").slick(obj);
-
-      // filter
-      if (MAIN.imagesObj[MAIN.getVariantId()])
-        $("[data-product-single-media-group]").slick("slickFilter", ".myClass");
-    },
-    addSlideInSlick: () => {
-      Array.from(document.querySelectorAll(""));
-    },
-    ////////////////////////////////////////////////////////////////
-
-    getAllStackedImageElements: () => {
-      return document.querySelectorAll(".product-single__media>img");
-    },
-    getAllThumbnailImageElements: () => {
-      return document.querySelectorAll(".product-single__thumbnails img");
-    },
-    getStackedImageParentElement: (img) => {
-      return img.parentElement.parentElement.parentElement.parentElement;
-    },
-    getThumbnailImageParentElement: (img) => {
-      return img.parentElement.parentElement;
-    },
-    getImageElement: (id) => {
-      return Array.from(MAIN.getAllStackedImageElements()).filter(
-        (x) => x.getAttribute("data-media-id") == id
+    getImageFromSrc: (src, imageContainers) => {
+      const div = Array.from(imageContainers).filter(
+        (container) =>
+          // cleans impurity from image url to compare
+          MAIN.cleanImageUrl(
+            container.querySelector("img").src,
+            [MAIN._.cleanImage[0]],
+            [MAIN._.cleanImage[1]]
+          ) === src
       )[0];
+      return div;
     },
-    getIdFromImageSrc: (src) => {
-      let source;
-      if (src.match(/[a-z0-9\-\_.\/\:]{1,}/i))
-        source = src.match(/[a-z0-9\-\_.\/\:]{1,}/i)[0];
-      let ret;
-      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
-        for (const [id, { src, container }] of Object.entries(
-          MAIN.arrangedImages[MAIN.getVariantId()]
-        )) {
-          if (src.includes(source)) {
-            ret = id;
-          }
-        }
-      }
-      return ret;
-    },
-    thumbnailHiddenElementsAtLast: () => {
-      Array.from(document.querySelectorAll(".product-single__thumbnails>li"))
-        .filter((e) => e.style.display == "none")
-        .forEach((el) => {
-          el.parentElement.appendChild(el);
-        });
-    },
-    isCurrentVariantImage: (img) => {
-      let ret = false;
-      if (img.attributes) {
-        const dataMediaId = Number(img.attributes["data-media-id"].nodeValue);
-        MAIN.imagesObj[MAIN.getVariantId()].forEach((imgId_imgSrc) => {
-          if (imgId_imgSrc[0] == dataMediaId) ret = true;
-        });
-      } else ret = true;
-      return ret;
-    },
-    arrangeZoomedImagesInOrder: (magnificPopupItems) => {
-      const arr = [];
-      MAIN.imagesObj[MAIN.getVariantId()].forEach((imgId_imgSrc) => {
-        arr.push(MAIN.findZoomedImage(imgId_imgSrc[0], magnificPopupItems));
-      });
-      return arr;
-    },
-    findZoomedImage: (id, magnificPopupItems) => {
-      return Array.from(magnificPopupItems).filter((x) => {
-        let ret = false;
-        const dataMediaId = Number(
-          (x.attributes ? x : x.el[0]).attributes["data-media-id"].nodeValue
+    cleanImageUrl: (imageUrl, oldPhrases, newPhrases) => {
+      /**
+       * @returns cleaned url of the image,
+       * @desc
+       * takes the oldPhrases in form of array and replaces each old phrase with a new one in the imageUrl and returns it
+       * @args
+       * imageUrl - url of the image we want to clean
+       * oldPhrases:[] - type array, array of phrases to replace with the newPhrases,
+       * newPhrases:[] - new set of phrases to replace the old phrases,
+       */
+      if (oldPhrases.length !== newPhrases.length)
+        return console.error(
+          "number of new phrases to replace should be equal to number of old phrases to replace, or you forgot to pass the phrases in form of array"
         );
-        if (id == dataMediaId) ret = true;
-        return ret;
-      })[0];
+      for (let i = 0; i < oldPhrases.length; i++) {
+        imageUrl = imageUrl.replace(oldPhrases[i], newPhrases[i]);
+      }
+      return imageUrl;
+    },
+    getImageFromDataMediaId: (dataMediaId) =>
+      Array.from(MAIN.imageContainers).filter(
+        (x) =>
+          x.querySelector("img").getAttribute("data-media-id") == dataMediaId
+      )[0],
+
+    brooklynImageOperations: () => {
+      console.log("operating images");
+
+      /* change the dropdown to the current selected variant
+      this is needed because when the first variant is soldout the current variant is updated 
+      to the next available variant but the change doesn't reflect on the dropdown shown on screen 
+      document
+        .querySelectorAll(MAIN._.variantSelectors.dropDowns)
+        .forEach((x, i) => {
+          x.querySelectorAll("option").forEach((x) => {
+            x.value ==
+            MAIN.js.variants.filter((x) => x.id == MAIN.getVariantId())[0][
+              `option${i + 1}`
+            ]
+              ? x.setAttribute("selected", "selected")
+              : x.removeAttribute("selected");
+          });
+        });
+       we don't need the code because by default if the url params are empty it will goto the first available variant but
+      in case any user deliberately chose the soldout variant for the purpose of sharing then our script should not change the 
+      selected variant. hence we don't need the above code . but it's cool so keep it for future reference */
+
+      const parentContainer = document.querySelector(MAIN._.parentContainer);
+
+      // 1. remove all images
+      document.querySelectorAll(MAIN._.containers).forEach((x) => {
+        x.remove();
+      });
+
+      if (MAIN.arrangedImages[MAIN.getVariantId()]) {
+        // selected variant has images
+
+        // add images variant wise
+        arr = [
+          ...Object.entries(MAIN.arrangedImages[MAIN.getVariantId()]),
+          ...Object.entries(MAIN.arrangedImages["common_media"]),
+        ];
+
+        for (const [id, { src, container }] of arr) {
+          parentContainer.appendChild(container);
+        }
+      } else {
+        // slected variant doesn't have images
+        MAIN.imageContainers.forEach((x) => parentContainer.appendChild(x));
+      }
     },
   };
   if (
+    window.Shopify?.theme?.name === "Brooklyn" &&
     location.pathname.includes("/products/") &&
-    location.pathname.length > 10 &&
-    window.Shopify?.theme?.name === "Brooklyn"
+    location.pathname.length > 10
   )
-    MAIN.INIT();
+    MAIN.init();
 })();
