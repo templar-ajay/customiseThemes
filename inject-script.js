@@ -1,11 +1,25 @@
 (() => {
   const MAIN = {
     _: {
-      smallImages: "[data-product-thumbnails] li img",
-      containers: "[data-product-thumbnails] li",
-      variantSelectors: { dropDowns: "select[id^='SingleOptionSelector-']" },
-      parentContainer: "[data-product-thumbnails]",
-      cleanImage: ["_150x.", "."],
+      variantSelectors: {
+        dropDowns: "select[id^='SingleOptionSelector-']",
+        buttons: "fieldset label",
+      },
+      imageType: {
+        thumbnails: {
+          smallImages: "[data-product-thumbnails] li img",
+          containers: "[data-product-thumbnails] li",
+          parentContainer: "[data-product-thumbnails]",
+          cleanImage: ["_150x.", "."],
+        },
+        stacked: {
+          smallImages: ".product-single__media img",
+          containers: "[data-product-single-media-flex-wrapper]",
+          parentContainer: "[data-product-single-media-group]",
+          cleanImage: ["_300x300.", "."],
+          cleanVideo: ["_850x850.", "."],
+        },
+      },
     },
     init: async () => {
       console.log("it worked");
@@ -13,26 +27,56 @@
         (x) => x.json()
       );
 
-      MAIN.imageContainers = document.querySelectorAll(MAIN._.containers);
+      if (document.querySelector(MAIN._.imageType.thumbnails.containers)) {
+        console.log(`image layout is thumbnails`);
+        MAIN.exec(MAIN._.imageType.thumbnails);
+      }
+      // check for layout type
+      else if (document.querySelector(MAIN._.imageType.stacked.containers)) {
+        console.log("image layout is stacked");
+        MAIN.exec(MAIN._.imageType.stacked);
+      }
+    },
+    exec: (_) => {
+      MAIN.imageContainers = document.querySelectorAll(_.containers);
       console.log("imageContainers", MAIN.imageContainers);
 
-      MAIN.arrangedImages = MAIN.makeImagesObj(MAIN.js, MAIN.imageContainers);
+      MAIN.arrangedImages = MAIN.makeImagesObj(
+        MAIN.js,
+        MAIN.imageContainers,
+        _
+      );
       console.log("arranged images", MAIN.arrangedImages);
 
       // firstTime
-      MAIN.brooklynImageOperations();
+      MAIN.brooklynImageOperations(_);
 
-      document
-        .querySelectorAll(MAIN._.variantSelectors.dropDowns)
-        .forEach(() => {
-          addEventListener("change", () => {
+      // for next times
+      MAIN.bindEventListeners(MAIN._.variantSelectors, _);
+    },
+    bindEventListeners: (o, _) => {
+      const { dropDowns, buttons } = o;
+      if (dropDowns) {
+        // add event listeners for variant change event
+        document.querySelectorAll(dropDowns).forEach((x) => {
+          x.addEventListener("change", () => {
             setTimeout(() => {
-              MAIN.brooklynImageOperations();
+              MAIN.brooklynImageOperations(_);
             });
           });
         });
+      }
+      if (buttons) {
+        document.querySelectorAll(buttons).forEach((x) => {
+          x.addEventListener("click", () => {
+            setTimeout(() => {
+              MAIN.brooklynImageOperations(_);
+            });
+          });
+        });
+      }
     },
-    makeImagesObj: function (js, imageContainers) {
+    makeImagesObj: function (js, imageContainers, _) {
       /**
        * @params takes the json as argument
        * @note doesn't append common_media images after the end of each variant images
@@ -57,8 +101,7 @@
         for (let [index, media] of js.media.entries()) {
           if (
             index > lastIndexOfMedia &&
-            ((variant.featured_media?.id && media.media_type === "image") ||
-              variant === "emptyLoop")
+            (variant.featured_media?.id || variant === "emptyLoop")
           ) {
             if (variant.featured_media?.id == media.id) {
               ("add media to the variant");
@@ -70,7 +113,8 @@
                 MAIN.getImageFromDataMediaId(media.id) ||
                 MAIN.getImageFromSrc(
                   media.preview_image.src,
-                  MAIN.imageContainers
+                  MAIN.imageContainers,
+                  _
                 );
 
               ID = variant.id;
@@ -89,7 +133,8 @@
                 MAIN.getImageFromDataMediaId(media.id) ||
                 MAIN.getImageFromSrc(
                   media.preview_image.src,
-                  MAIN.imageContainers
+                  MAIN.imageContainers,
+                  _
                 );
             }
           }
@@ -108,15 +153,22 @@
       document.body.scrollTop = 0; // For Safari
       document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     },
-    getImageFromSrc: (src, imageContainers) => {
-      const div = Array.from(imageContainers).filter(
-        (container) =>
-          // cleans impurity from image url to compare
-          MAIN.cleanImageUrl(
-            container.querySelector("img").src,
-            [MAIN._.cleanImage[0]],
-            [MAIN._.cleanImage[1]]
-          ) === src
+    getImageFromSrc: (src, imageContainers, _) => {
+      const div = Array.from(imageContainers).filter((container) =>
+        // in case the image is an iframe (not of type image)
+        container.querySelector("video")
+          ? // cleans impurity from video image url
+            MAIN.cleanImageUrl(
+              container.querySelector("img")?.src,
+              [_.cleanVideo[0]],
+              [_.cleanVideo[1]]
+            ) === src
+          : // cleans impurity from image url to compare
+            MAIN.cleanImageUrl(
+              container.querySelector("img")?.src,
+              [_.cleanImage[0]],
+              [_.cleanImage[1]]
+            ) === src
       )[0];
       return div;
     },
@@ -142,10 +194,10 @@
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
         (x) =>
-          x.querySelector("img").getAttribute("data-media-id") == dataMediaId
+          x.querySelector("img")?.getAttribute("data-media-id") == dataMediaId
       )[0],
 
-    brooklynImageOperations: () => {
+    brooklynImageOperations: (_) => {
       console.log("operating images");
 
       /* change the dropdown to the current selected variant
@@ -167,10 +219,10 @@
       in case any user deliberately chose the soldout variant for the purpose of sharing then our script should not change the 
       selected variant. hence we don't need the above code . but it's cool so keep it for future reference */
 
-      const parentContainer = document.querySelector(MAIN._.parentContainer);
+      const parentContainer = document.querySelector(_.parentContainer);
 
       // 1. remove all images
-      document.querySelectorAll(MAIN._.containers).forEach((x) => {
+      document.querySelectorAll(_.containers).forEach((x) => {
         x.remove();
       });
 
