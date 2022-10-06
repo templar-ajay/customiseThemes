@@ -115,7 +115,8 @@
 
   if (
     window.Shopify?.theme?.name === "<theme-name>" &&
-    location.pathname.split("/").indexOf("products") >= 0
+    location.pathname.includes("/products/") &&
+    location.pathname.length > 10
   )
     MAIN.init();
 })();
