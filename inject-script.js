@@ -26,8 +26,8 @@
 
       document
         .querySelectorAll(MAIN._.variantSelectors.dropDowns)
-        .forEach(() => {
-          addEventListener("change", () => {
+        .forEach((x) => {
+          x.addEventListener("change", () => {
             setTimeout(() => {
               // imageOperations function
             });
