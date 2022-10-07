@@ -54,6 +54,7 @@
       // for next times
       MAIN.bindEventListeners(MAIN._.variantSelectors, _);
     },
+
     bindEventListeners: (o, _) => {
       const { dropDowns, buttons } = o;
       if (dropDowns) {
@@ -76,6 +77,7 @@
         });
       }
     },
+
     makeImagesObj: function (js, imageContainers, _) {
       /**
        * @params takes the json as argument
@@ -153,6 +155,7 @@
       document.body.scrollTop = 0; // For Safari
       document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     },
+
     getImageFromSrc: (src, imageContainers, _) => {
       const div = Array.from(imageContainers).filter((container) =>
         // in case the image is an iframe (not of type image)
@@ -172,6 +175,7 @@
       )[0];
       return div;
     },
+
     cleanImageUrl: (imageUrl, oldPhrases, newPhrases) => {
       /**
        * @returns cleaned url of the image,
@@ -191,6 +195,7 @@
       }
       return imageUrl;
     },
+
     getImageFromDataMediaId: (dataMediaId) =>
       Array.from(MAIN.imageContainers).filter(
         (x) =>
@@ -238,6 +243,12 @@
         for (const [id, { src, container }] of arr) {
           parentContainer.appendChild(container);
         }
+
+        MAIN.imageContainers.forEach((x) => {
+          const y = x.cloneNode(true);
+          y.style.display = "none";
+          parentContainer.appendChild(y);
+        });
       } else {
         // slected variant doesn't have images
         MAIN.imageContainers.forEach((x) => parentContainer.appendChild(x));
